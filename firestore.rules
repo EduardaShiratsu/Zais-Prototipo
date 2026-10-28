@@ -1,0 +1,87 @@
+rules_version = '2';
+
+// Regras de segurança do Firestore para o site da Zais.
+// Cole este conteúdo em: Firebase Console > Firestore Database > Regras > Publicar.
+//
+// Níveis dos colaboradores (campo "nivel" em colaboradores/{uid}):
+//   1 = só faz reservas
+//   2 = faz, edita e cancela reservas
+//   3 = administrador (bailes, preços, cativos, equipe)
+//
+// O público (sem login) só consegue LER os bailes e o mapa de ocupação
+// (que não tem nomes). Nomes e telefones ficam só para a equipe.
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function logado() {
+      return request.auth != null;
+    }
+    function perfil() {
+      return get(/databases/$(database)/documents/colaboradores/$(request.auth.uid));
+    }
+    function ativo() {
+      return logado()
+        && exists(/databases/$(database)/documents/colaboradores/$(request.auth.uid))
+        && perfil().data.ativo == true;
+    }
+    function recepcao() { return ativo() && perfil().data.nivel >= 1; }
+    function operador() { return ativo() && perfil().data.nivel >= 2; }
+    function admin()    { return ativo() && perfil().data.nivel >= 3; }
+
+    // ---- equipe ----
+    match /colaboradores/{uid} {
+      allow get: if logado() && (request.auth.uid == uid || admin());
+      allow list: if admin();
+      allow create, update: if admin();
+      allow delete: if false;
+    }
+
+    // ---- modelo de cativos ----
+    match /cativos/{turno} {
+      allow read: if recepcao();
+      allow write: if admin();
+    }
+
+    // ---- bailes ----
+    match /bailes/{id} {
+      allow read: if true;
+      allow create, update, delete: if admin();
+
+      // Nomes e telefones: só a equipe. Nível 1 cria; nível 2+ edita e apaga.
+      match /reservas/{mesa} {
+        allow read: if recepcao();
+        allow create: if recepcao();
+        allow update, delete: if operador();
+      }
+
+      // Histórico: a equipe lê e acrescenta. Ninguém altera nem apaga.
+      match /historico/{evento} {
+        allow read: if recepcao();
+        allow create: if recepcao()
+          && request.resource.data.keys().hasAll(['mesa', 'acao', 'por', 'quando']);
+        allow update, delete: if false;
+      }
+    }
+
+    // ---- mapa de ocupação (público, sem nomes) ----
+    match /ocupacao/{id} {
+      function mesasMudadas() {
+        return request.resource.data.mesas.diff(resource.data.mesas).affectedKeys();
+      }
+      function mudouSoUmaMesa() {
+        return request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mesas'])
+          && mesasMudadas().size() == 1;
+      }
+      function statusAntes() {
+        return resource.data.mesas[mesasMudadas().toList()[0]];
+      }
+
+      allow read: if true;
+      allow create, delete: if admin();
+      // Nível 1 só ocupa mesa livre (uma por vez). Nível 2+ pode cancelar e editar.
+      allow update: if admin()
+        || (recepcao() && mudouSoUmaMesa() && (operador() || statusAntes() == 'livre'));
+    }
+  }
+}
