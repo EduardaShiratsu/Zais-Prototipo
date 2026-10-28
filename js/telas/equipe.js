@@ -85,6 +85,7 @@ function viewPainel(ctx) {
       </div>
       ${adm ? `<div class="acoes-adm">
         <a class="btn btn-prim" href="#/equipe/novo">Novo baile</a>
+        <a class="btn btn-sec" href="#/equipe/importar">Importar</a>
         <a class="btn btn-sec" href="#/equipe/cativos">Cativos</a>
         <a class="btn btn-sec" href="#/equipe/usuarios">Equipe</a></div>` : ""}
       <section>
@@ -642,4 +643,63 @@ export function viewColaboradores(ctx) {
     }).join("") || vazio("Nenhum colaborador");
   });
   return () => des();
+}
+
+// =====================================================================
+// Importar programação (administrador): cola uma lista e cria vários bailes de uma vez
+// =====================================================================
+export function viewImportar(ctx) {
+  const raiz = ctx.principal;
+  const ator = () => ({ uid: ctx.sessao.uid, nome: ctx.sessao.nome });
+  let lista = null;
+
+  raiz.innerHTML = `
+    <a class="voltar" href="#/equipe">${icone("seta").replace("<svg", '<svg width="16" height="16"')} Voltar</a>
+    <div class="titulo-pagina"><h1>Importar programação</h1><p>Cole aqui a lista de bailes que a Claude preparou a partir do documento do mês.</p></div>
+    <div class="cartao pilha">
+      <div class="campo"><label for="imp-texto">Lista de bailes</label>
+        <textarea id="imp-texto" rows="9" spellcheck="false" placeholder='[ {"data":"2026-11-01","turno":"unico","banda":"Alexandre","abre":"18h","fecha":"23h"} ]'></textarea>
+        <span class="dica">Datas que já existem são puladas, então não tem problema colar duas vezes.</span></div>
+      <div class="erro-form" hidden></div>
+      <button class="btn btn-sec btn-bloco" data-acao="imp-conferir">Conferir lista</button>
+      <div id="imp-previa"></div>
+    </div>`;
+
+  const erro = (m) => { const e = q(raiz, ".erro-form"); e.hidden = !m; e.textContent = m || ""; };
+
+  acoes["imp-conferir"] = () => {
+    erro("");
+    q(raiz, "#imp-previa").innerHTML = "";
+    lista = null;
+    let dados;
+    try { dados = JSON.parse(q(raiz, "#imp-texto").value); } catch { erro("Não consegui ler a lista. Cole exatamente o texto que a Claude mandou, do [ até o ]."); return; }
+    if (!Array.isArray(dados) || !dados.length) { erro("A lista está vazia."); return; }
+    for (const d of dados) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(d.data || "") || !["tarde", "noite", "unico"].includes(d.turno)) {
+        erro(`Item com data ou turno inválido: ${JSON.stringify(d).slice(0, 80)}`); return;
+      }
+      if (d.reservavel === undefined) d.reservavel = d.turno !== "unico" && ehSabado(d.data);
+    }
+    lista = dados;
+    q(raiz, "#imp-previa").innerHTML =
+      `<p class="small muted" style="margin:6px 0">${dados.length} bailes encontrados. Confira e clique em importar.</p>` +
+      `<div class="pilha" style="gap:6px">${dados.map((d) =>
+        `<div class="linha-res" style="cursor:default"><span class="n" style="width:auto;padding:0 8px">${esc(d.data.slice(8))}/${esc(d.data.slice(5, 7))}</span>
+        <span class="t"><b>${esc(d.banda || "(sem atração)")}</b><small>${esc(TURNOS[d.turno] || "")} · ${esc(d.abre || "?")} às ${esc(d.fecha || "?")}${d.reservavel ? " · com reserva de mesa" : ""}</small></span></div>`).join("")}</div>
+      <div style="height:12px"></div><button class="btn btn-prim btn-bloco" data-acao="imp-importar">Importar ${dados.length} bailes</button>`;
+  };
+
+  acoes["imp-importar"] = (el) => ocupado(el, async () => {
+    let novos = 0, pulados = 0;
+    const falhas = [];
+    for (const d of lista) {
+      try { await ctx.api.criarBaile(d, ator()); novos++; }
+      catch (e) { if (/Já existe/.test(e.message)) pulados++; else falhas.push(`${d.data}: ${e.message}`); }
+    }
+    q(raiz, "#imp-previa").innerHTML =
+      `<div class="aviso"><b>${novos}</b> bailes criados · <b>${pulados}</b> já existiam e foram pulados${falhas.length ? ` · <b>${falhas.length}</b> com erro:<br>${falhas.map(esc).join("<br>")}` : ""}</div>
+       <p style="margin-top:12px"><a class="btn btn-prim" href="#/equipe">Ver no painel</a></p>`;
+    aviso("Importação concluída.", falhas.length ? "erro" : "ok");
+  });
+  return () => {};
 }

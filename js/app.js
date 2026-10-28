@@ -5,7 +5,7 @@ import { pode } from "./dominio.js";
 import { acoes, formularios, entradas, limparRegistros, icone, fecharFolha, folhaAberta, aviso } from "./ui.js";
 import { diaOperacional, dataCurta, siglaDia, esc } from "./util.js";
 import { viewInicio, viewBailes, viewBaile, viewChegar, viewSemDados } from "./telas/publico.js";
-import { viewEquipe, viewBaileEquipe, viewBaileForm, viewCativos, viewColaboradores } from "./telas/equipe.js";
+import { viewEquipe, viewBaileEquipe, viewBaileForm, viewCativos, viewColaboradores, viewImportar } from "./telas/equipe.js";
 import { carregando } from "./telas/comum.js";
 
 const raizApp = document.getElementById("app");
@@ -79,6 +79,7 @@ function renderizar() {
           : viewBaileEquipe(ctx, c);
       } else if (b === "novo") v = pode(s.nivel, "gerenciarBailes") ? viewBaileForm(ctx, null) : negado("Só administradores criam bailes.");
       else if (b === "cativos") v = pode(s.nivel, "gerenciarCativos") ? viewCativos(ctx) : negado("Só administradores editam cativos.");
+      else if (b === "importar") v = pode(s.nivel, "gerenciarBailes") ? viewImportar(ctx) : negado("Só administradores importam a programação.");
       else if (b === "usuarios") v = pode(s.nivel, "gerenciarEquipe") ? viewColaboradores(ctx) : negado("Só administradores gerenciam a equipe.");
       else v = viewEquipe(ctx);
     } else v = viewInicio(ctx);
