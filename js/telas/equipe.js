@@ -5,6 +5,7 @@ import {
 } from "../util.js";
 import { NIVEIS, TURNOS, PADROES } from "../config.js";
 import { pode, ROTULO_STATUS, mensagemConfirmacao, resumoOcupacao } from "../dominio.js";
+import { CATIVOS_ANTIGOS, URL_BANCO_ANTIGO } from "../cativos-antigos.js";
 import { criarMapa } from "../mapa.js";
 import { MESAS, TODAS, ZONAS, lugaresDe, zonaDaMesa } from "../layout.js";
 import {
@@ -504,7 +505,9 @@ export function viewCativos(ctx) {
       <button class="aba" data-acao="turno" data-t="tarde">Sábado tarde</button>
       <button class="aba ativa" data-acao="turno" data-t="noite">Sábado noite</button></div>
     <div style="height:12px"></div>
-    <button class="btn btn-prim btn-bloco" data-acao="cativo-novo">Adicionar cativo</button>
+    <div class="linha" style="gap:8px">
+      <button class="btn btn-prim" style="flex:1" data-acao="cativo-novo">Adicionar cativo</button>
+      <button class="btn btn-sec" style="flex:1" data-acao="cativo-antigo">Trazer do site antigo</button></div>
     <div style="height:12px"></div>
     <div class="pilha" id="lista" style="gap:8px">${carregando()}</div>`;
 
@@ -564,6 +567,44 @@ export function viewCativos(ctx) {
   formularios.cativo = (form) =>
     salvar(form, () => { modelo[form.mesa.value] = { nome: form.nome.value.trim(), telefone: form.telefone.value.trim() }; }, "Cativo salvo no modelo.");
   acoes["cativo-remover"] = (el) => salvar(el, () => { delete modelo[el.dataset.mesa]; }, "Cativo removido do modelo.");
+  // Junta a lista fixa do site antigo com as mudanças feitas lá depois (lidas do banco antigo).
+  acoes["cativo-antigo"] = (el) => ocupado(el, async () => {
+    const novo = { tarde: {}, noite: {} };
+    let aviso2 = "";
+    for (const t of ["tarde", "noite"]) {
+      const m = {};
+      for (const [n, nome] of Object.entries(CATIVOS_ANTIGOS[t])) m[n] = { nome, telefone: "" };
+      try {
+        const r = await fetch(`${URL_BANCO_ANTIGO}/cativos/${t}.json`);
+        if (!r.ok) throw new Error(r.status);
+        const vivo = (await r.json()) || {};
+        for (const [n, v] of Object.entries(vivo)) {
+          const nome = v && typeof v === "object" ? v.nome : v;
+          if (nome) m[n] = { nome: String(nome), telefone: v && v.telefone ? String(v.telefone) : "" };
+          else delete m[n];
+        }
+      } catch { aviso2 = "Não consegui ler as alterações recentes do site antigo; usei só a lista fixa."; }
+      novo[t] = m;
+    }
+    const total = (t) => Object.keys(novo[t]).length;
+    abrirFolha({
+      render: () => `<h2>Trazer do site antigo</h2>
+        <p class="sub">Sábado tarde: <b>${total("tarde")}</b> cativos · Sábado noite: <b>${total("noite")}</b> cativos</p>
+        ${aviso2 ? `<div class="aviso" style="margin-top:12px">${esc(aviso2)}</div>` : ""}
+        <div class="aviso" style="margin-top:12px">Isso <b>substitui</b> o modelo atual de cativos dos dois turnos. Bailes que já existem não mudam; use “Aplicar cativos do modelo” neles.</div>
+        <div class="erro-form" hidden></div>
+        <button class="btn btn-prim btn-bloco" style="margin-top:14px" data-acao="cativo-antigo-ok">Importar agora</button>`,
+    });
+    acoes["cativo-antigo-ok"] = (b) => ocupado(b, async () => {
+      try {
+        await ctx.api.salvarCativos("tarde", novo.tarde);
+        await ctx.api.salvarCativos("noite", novo.noite);
+        modelo = novo[turno];
+        fecharFolha(); desenhar();
+        aviso("Cativos importados.", "ok");
+      } catch (e) { const er = document.querySelector("#camada .erro-form"); if (er) { er.hidden = false; er.textContent = e.message; } }
+    });
+  });
   acoes["cativo-novo"] = () => { if (modelo) abrirEdicao(null); };
   acoes["cativo-editar"] = (el) => { if (modelo) abrirEdicao(el.dataset.mesa); };
   acoes.turno = (el) => {
