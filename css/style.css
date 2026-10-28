@@ -380,7 +380,9 @@ h1, h2, h3 { line-height: 1.15; }
 .painel-topo { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 18px; background: var(--noite); color: var(--cream); }
 .painel-topo .avatar { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; background: var(--terra); font-weight: 800; flex: none; }
 .painel-topo small { color: var(--ouro); font-weight: 600; }
-.acoes-adm { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
+.acoes-adm { display: flex; flex-wrap: nowrap; gap: 8px; }
+.acoes-adm .btn { flex: 1 1 0; min-width: 0; padding: 9px 6px; font-size: 13px; white-space: nowrap; }
+@media (min-width: 900px) { .acoes-adm { max-width: 560px; } .acoes-adm .btn { font-size: 14px; padding: 10px 12px; } }
 .tabela-colab { display: flex; flex-direction: column; gap: 9px; }
 .colab { display: flex; align-items: center; gap: 10px; padding: 11px 12px; background: #fff; border: 1px solid var(--line); border-radius: 14px; flex-wrap: wrap; }
 .colab .t { flex: 1; min-width: 150px; display: flex; flex-direction: column; }

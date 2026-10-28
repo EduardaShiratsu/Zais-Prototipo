@@ -5,7 +5,7 @@ Site da casa: programação, horários, como chegar, reserva de mesas com mapa d
 Site estático (sem build) + Firebase gratuito (Firestore e Authentication).
 
 ## Testar sem Firebase
-Abra o site com `?demo` no final do endereço (ex.: `https://SEU-USUARIO.github.io/zais-prototipo/?demo`). Os dados são de exemplo e não são salvos.
+Abra o site com `?demo` no final do endereço (ex.: `https://eduardashiratsu.github.io/Zais-Prototipo/?demo`). Os dados são de exemplo e não são salvos.
 Acessos de teste: `admin`/`admin` (nível 3), `caixa`/`caixa` (nível 2), `recepcao`/`recepcao` (nível 1).
 
 Localmente: `python3 -m http.server 8000` e abra `http://localhost:8000/?demo`.
@@ -24,7 +24,7 @@ Localmente: `python3 -m http.server 8000` e abra `http://localhost:8000/?demo`.
    - Copie o UID desse usuário.
    - Firestore → coleção `colaboradores` → documento com ID = UID, campos: `nome` (texto), `usuario` (texto, igual ao do e-mail), `nivel` (número 3), `ativo` (booleano true).
 5. Entre em **Equipe** no site e crie os demais colaboradores pela tela "Equipe".
-6. Authentication → Settings → Authorized domains: confirme que o domínio do GitHub Pages (`SEU-USUARIO.github.io`) está na lista.
+6. Authentication → Settings → Authorized domains: confirme que o domínio do GitHub Pages (`eduardashiratsu.github.io`) está na lista.
 7. Crie os bailes pela tela "Novo baile" e cadastre os cativos em "Cativos".
 
 > A configuração web do Firebase (`js/config.js`) é pública por natureza; quem protege os dados são as **regras** do passo 3. Teste as regras no simulador do console antes de divulgar.
