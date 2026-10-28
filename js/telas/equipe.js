@@ -446,7 +446,7 @@ export function viewBaileForm(ctx, id) {
           <div class="campo"><label for="b-m4">Mesa de 4 lugares (R$)</label><input id="b-m4" name="mesa4" type="number" min="0" step="0.5" inputmode="decimal" value="${esc(n(base.mesa4))}"></div></div>
         <label class="marcar"><input type="checkbox" name="reservavel" ${base.reservavel ? "checked" : ""} ${editando ? "disabled" : ""}> Aceita reserva de mesa (bailes de sábado da casa)</label>
         ${editando ? "" : `<p class="tiny muted">Ao criar com reserva de mesa, as mesas já nascem com os cativos do modelo (tela “Cativos”).</p>`}
-        <div class="campo"><label for="b-obs">Observação para o público (opcional)</label><textarea id="b-obs" name="obs">${esc(base.obs || "")}</textarea></div>
+        <div class="campo"><label for="b-obs">Descrição do baile (aparece para o público, opcional)</label><textarea id="b-obs" name="obs">${esc(base.obs || "")}</textarea></div>
         <div class="erro-form" hidden></div>
         <button class="btn btn-prim btn-bloco" type="submit">${editando ? "Salvar alterações" : "Criar baile"}</button>
       </form>`;
@@ -743,8 +743,8 @@ export function viewImportar(ctx) {
     <div class="titulo-pagina"><h1>Importar programação</h1><p>Cole aqui a lista de bailes que a Claude preparou a partir do documento do mês.</p></div>
     <div class="cartao pilha">
       <div class="campo"><label for="imp-texto">Lista de bailes</label>
-        <textarea id="imp-texto" rows="9" spellcheck="false" placeholder='[ {"data":"2026-11-01","turno":"unico","banda":"Alexandre","abre":"18h","fecha":"23h"} ]'></textarea>
-        <span class="dica">Datas que já existem são puladas, então não tem problema colar duas vezes.</span></div>
+        <textarea id="imp-texto" rows="9" spellcheck="false" placeholder='[ {"data":"2026-11-01","turno":"unico","banda":"Alexandre","abre":"18h","fecha":"23h","descricao":"Noite de bolero e samba"} ]'></textarea>
+        <span class="dica">Cada baile pode ter uma "descricao" (texto livre que aparece para o público). Datas que já existem são puladas, então não tem problema colar duas vezes.</span></div>
       <div class="erro-form" hidden></div>
       <button class="btn btn-sec btn-bloco" data-acao="imp-conferir">Conferir lista</button>
       <div id="imp-previa"></div>
@@ -763,6 +763,7 @@ export function viewImportar(ctx) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(d.data || "") || !["tarde", "noite", "unico"].includes(d.turno)) {
         erro(`Item com data ou turno inválido: ${JSON.stringify(d).slice(0, 80)}`); return;
       }
+      if (d.descricao && !d.obs) d.obs = d.descricao;
       if (d.reservavel === undefined) d.reservavel = d.turno !== "unico" && ehSabado(d.data);
     }
     lista = dados;
@@ -770,7 +771,7 @@ export function viewImportar(ctx) {
       `<p class="small muted" style="margin:6px 0">${dados.length} bailes encontrados. Confira e clique em importar.</p>` +
       `<div class="pilha" style="gap:6px">${dados.map((d) =>
         `<div class="linha-res" style="cursor:default"><span class="n" style="width:auto;padding:0 8px">${esc(d.data.slice(8))}/${esc(d.data.slice(5, 7))}</span>
-        <span class="t"><b>${esc(d.banda || "(sem atração)")}</b><small>${esc(TURNOS[d.turno] || "")} · ${esc(d.abre || "?")} às ${esc(d.fecha || "?")}${d.reservavel ? " · com reserva de mesa" : ""}</small></span></div>`).join("")}</div>
+        <span class="t"><b>${esc(d.banda || "(sem atração)")}</b><small>${esc(TURNOS[d.turno] || "")} · ${esc(d.abre || "?")} às ${esc(d.fecha || "?")}${d.reservavel ? " · com reserva de mesa" : ""}${d.obs ? " · " + esc(String(d.obs).slice(0, 60)) + (String(d.obs).length > 60 ? "…" : "") : ""}</small></span></div>`).join("")}</div>
       <div style="height:12px"></div><button class="btn btn-prim btn-bloco" data-acao="imp-importar">Importar ${dados.length} bailes</button>`;
   };
 

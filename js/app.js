@@ -149,3 +149,8 @@ window.addEventListener("hashchange", renderizar);
     }
   });
 })();
+
+// Deixa o site instalável como aplicativo (ícone na tela inicial, sem barra do navegador).
+if ("serviceWorker" in navigator && location.protocol === "https:") {
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+}
