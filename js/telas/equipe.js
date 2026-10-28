@@ -111,9 +111,23 @@ function viewPainel(ctx) {
     });
   };
 
+  // Sábados que ainda não receberam os cativos (criados antes desta função): aplica sozinho, uma vez por baile.
+  let aplicando = false;
+  async function completarCativos(lista) {
+    if (!adm || aplicando) return;
+    const faltam = lista.filter((b) => b.reservavel && !b.cativosAplicados);
+    if (!faltam.length) return;
+    aplicando = true;
+    try {
+      for (const b of faltam) await ctx.api.aplicarCativos(b.id, { uid: ctx.sessao.uid, nome: ctx.sessao.nome });
+      aviso("Cativos colocados nos sábados cadastrados.", "ok");
+    } catch (e) { console.error(e); } finally { aplicando = false; }
+  }
+
   const des = ctx.api.ouvirBailes((lista, err) => {
     const box = q(raiz, "#proximos");
     if (!box) return;
+    if (!err && lista) completarCativos(lista);
     if (err) { box.innerHTML = vazio("Não foi possível carregar os bailes", "Confira a conexão e tente de novo."); return; }
     box.innerHTML = lista.length
       ? lista.map((b) => cartaoBaile(b, hrefDe(b))).join("")
@@ -500,7 +514,7 @@ export function viewCativos(ctx) {
   raiz.innerHTML = `
     <a class="voltar" href="#/equipe">${icone("seta").replace("<svg", '<svg width="16" height="16"')} Voltar</a>
     <div class="titulo-pagina"><h1>Cativos</h1><p>Clientes com mesa fixa. Este é o modelo usado quando um baile novo é criado.</p></div>
-    <div class="aviso" style="margin-bottom:14px">Os cativos valem para <b>todos os sábados</b>: os novos já nascem com eles e, ao salvar aqui, os sábados já cadastrados também recebem (só em mesas livres, sem mexer em reservas). Para tirar um cativo de uma data só, cancele direto na mesa daquele baile.</div>
+    <div class="aviso" style="margin-bottom:14px">Os cativos valem para <b>todos os sábados</b>: os novos já nascem com eles e, os sábados já cadastrados recebem sozinhos na primeira vez (só em mesas livres, sem mexer em reservas). Mudanças depois valem para os próximos bailes; para levar uma mudança aos sábados já criados, use o botão abaixo. Para tirar um cativo de uma data só, cancele direto na mesa daquele baile.</div>
     <button class="btn btn-sec btn-bloco btn-peq" style="margin-bottom:12px" data-acao="cativo-aplicar-todos">Aplicar nos sábados já cadastrados</button>
     <div class="abas" id="abas-turno">
       <button class="aba" data-acao="turno" data-t="tarde">Sábado tarde</button>
@@ -586,7 +600,6 @@ export function viewCativos(ctx) {
       aviso(ok, "ok");
       fecharFolha();
       desenhar();
-      if (!/remov/i.test(ok)) await propagarComAviso([turno]);
     } catch (e) {
       const el = document.querySelector("#camada .erro-form");
       if (el) { el.hidden = false; el.textContent = e.message; } else aviso(e.message, "erro");

@@ -9,6 +9,7 @@
 //   colaboradores/{uid}                       { nome, usuario, nivel, ativo }
 import { FIREBASE_CONFIG, SUFIXO_EMAIL, PADROES } from "../config.js";
 import { ocupacaoInicial, reservasDosCativos, validarBaile } from "../dominio.js";
+import { CATIVOS_ANTIGOS } from "../cativos-antigos.js";
 import { diaOperacional, idBaile, ordenarBailes } from "../util.js";
 
 const V = "10.12.2";
@@ -133,6 +134,7 @@ export function criarFirebase() {
         mesa2: numero(d.mesa2, PADROES.mesa2),
         mesa4: numero(d.mesa4, PADROES.mesa4),
         reservavel: !!d.reservavel,
+        cativosAplicados: !!d.reservavel,
         obs: (d.obs || "").trim(),
         criadoPor: ator.nome,
         criadoEm: serverTimestamp(),
@@ -280,6 +282,7 @@ export function criarFirebase() {
           }
         }
         if (qtd) tx.update(refOcup(id), upd);
+        tx.update(refBaile(id), { cativosAplicados: true });
       });
       return qtd;
     },
@@ -287,7 +290,10 @@ export function criarFirebase() {
     // ---------- modelo de cativos (administrador) ----------
     async lerCativos(turno) {
       const s = await getDoc(doc(db, "cativos", turno));
-      return s.exists() ? s.data().mesas || {} : {};
+      if (s.exists()) return s.data().mesas || {};
+      // Ainda não existe modelo salvo: usa a lista fixa do site antigo (assim os cativos aparecem sozinhos).
+      const fixa = CATIVOS_ANTIGOS[turno] || {};
+      return Object.fromEntries(Object.entries(fixa).map(([m, nome]) => [m, { nome, telefone: "" }]));
     },
     async salvarCativos(turno, mapa) {
       await setDoc(doc(db, "cativos", turno), { mesas: mapa });
