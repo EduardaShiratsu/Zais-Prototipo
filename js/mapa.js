@@ -99,6 +99,9 @@ export function criarMapa(host, { publico = false, aoClicar } = {}) {
       if (!g) return;
       const alvo = Math.min(3.4, Math.max(1, VIEWBOX.w / (g.w + 110)));
       definirZoom(alvo, { x: g.cx, y: g.cy });
+      // Como o mapa não tem rolagem própria na vertical, leva a página até a zona.
+      const topo = wrap.getBoundingClientRect().top + window.scrollY + (g.cy - VIEWBOX.y) * escala() - window.innerHeight / 2;
+      window.scrollTo({ top: Math.max(0, topo), behavior: "smooth" });
     },
     visaoGeral() { definirZoom(1); wrap.scrollTo({ left: 0, top: 0 }); },
   };

@@ -227,7 +227,7 @@ h1, h2, h3 { line-height: 1.15; }
 .mapa-caixa { position: relative; }
 .mapa-wrap {
   background: #fff; border: 1px solid var(--line); border-radius: var(--raio); overflow: auto;
-  max-height: 68vh; touch-action: pan-x pan-y pinch-zoom; -webkit-overflow-scrolling: touch;
+  touch-action: pan-x pan-y pinch-zoom; -webkit-overflow-scrolling: touch;
 }
 .mapa-svg { display: block; height: auto; user-select: none; -webkit-user-select: none; }
 .mapa-ferr { display: flex; gap: 8px; align-items: center; margin: 0 0 10px; }
@@ -393,3 +393,8 @@ h1, h2, h3 { line-height: 1.15; }
 .busca svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 18px; height: 18px; color: var(--ink-3); }
 
 .rodape { text-align: center; color: var(--ink-3); font-size: 12px; padding: 22px 16px 6px; }
+
+/* No computador o salão cabe inteiro na tela: sem zoom nem atalhos */
+@media (min-width: 900px) {
+  .mapa-ferr, [aria-label="Ir para uma parte do salão"] { display: none; }
+}

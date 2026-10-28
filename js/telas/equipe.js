@@ -500,7 +500,8 @@ export function viewCativos(ctx) {
   raiz.innerHTML = `
     <a class="voltar" href="#/equipe">${icone("seta").replace("<svg", '<svg width="16" height="16"')} Voltar</a>
     <div class="titulo-pagina"><h1>Cativos</h1><p>Clientes com mesa fixa. Este é o modelo usado quando um baile novo é criado.</p></div>
-    <div class="aviso" style="margin-bottom:14px">Mudar o modelo vale para os bailes criados <b>daqui para frente</b>. Em um baile que já existe, use “Aplicar cativos do modelo” na tela dele, ou cancele o cativo daquela data direto na mesa.</div>
+    <div class="aviso" style="margin-bottom:14px">Os cativos valem para <b>todos os sábados</b>: os novos já nascem com eles e, ao salvar aqui, os sábados já cadastrados também recebem (só em mesas livres, sem mexer em reservas). Para tirar um cativo de uma data só, cancele direto na mesa daquele baile.</div>
+    <button class="btn btn-sec btn-bloco btn-peq" style="margin-bottom:12px" data-acao="cativo-aplicar-todos">Aplicar nos sábados já cadastrados</button>
     <div class="abas" id="abas-turno">
       <button class="aba" data-acao="turno" data-t="tarde">Sábado tarde</button>
       <button class="aba ativa" data-acao="turno" data-t="noite">Sábado noite</button></div>
@@ -510,6 +511,33 @@ export function viewCativos(ctx) {
       <button class="btn btn-sec" style="flex:1" data-acao="cativo-antigo">Trazer do site antigo</button></div>
     <div style="height:12px"></div>
     <div class="pilha" id="lista" style="gap:8px">${carregando()}</div>`;
+
+  // Leva o modelo para todos os sábados futuros já cadastrados (só ocupa mesas livres; nunca mexe em reservas).
+  async function propagar(turnos) {
+    const bailes = await new Promise((ok, no) => {
+      let des = () => {};
+      let feito = false;
+      des = ctx.api.ouvirBailes((lista, err) => {
+        if (feito) return;
+        feito = true;
+        setTimeout(() => des(), 0);
+        err ? no(new Error("Não foi possível ler os bailes.")) : ok(lista || []);
+      });
+    });
+    let mesas = 0, bailesTocados = 0;
+    for (const b of bailes) {
+      if (!b.reservavel || !turnos.includes(b.turno)) continue;
+      const n = await ctx.api.aplicarCativos(b.id, { uid: ctx.sessao.uid, nome: ctx.sessao.nome });
+      if (n) { mesas += n; bailesTocados++; }
+    }
+    return { mesas, bailesTocados };
+  }
+  async function propagarComAviso(turnos) {
+    try {
+      const r = await propagar(turnos);
+      aviso(r.mesas ? `Cativos aplicados em ${r.bailesTocados} sábado(s) (${r.mesas} mesas).` : "Todos os sábados já estão com os cativos.", "ok");
+    } catch (e) { aviso(e.message, "erro"); }
+  }
 
   async function carregar() {
     q(raiz, "#lista").innerHTML = carregando();
@@ -558,6 +586,7 @@ export function viewCativos(ctx) {
       aviso(ok, "ok");
       fecharFolha();
       desenhar();
+      if (!/remov/i.test(ok)) await propagarComAviso([turno]);
     } catch (e) {
       const el = document.querySelector("#camada .erro-form");
       if (el) { el.hidden = false; el.textContent = e.message; } else aviso(e.message, "erro");
@@ -591,7 +620,7 @@ export function viewCativos(ctx) {
       render: () => `<h2>Trazer do site antigo</h2>
         <p class="sub">Sábado tarde: <b>${total("tarde")}</b> cativos · Sábado noite: <b>${total("noite")}</b> cativos</p>
         ${aviso2 ? `<div class="aviso" style="margin-top:12px">${esc(aviso2)}</div>` : ""}
-        <div class="aviso" style="margin-top:12px">Isso <b>substitui</b> o modelo atual de cativos dos dois turnos. Bailes que já existem não mudam; use “Aplicar cativos do modelo” neles.</div>
+        <div class="aviso" style="margin-top:12px">Isso <b>substitui</b> o modelo atual de cativos dos dois turnos. Depois de importar, os cativos também são aplicados em todos os sábados já cadastrados.</div>
         <div class="erro-form" hidden></div>
         <button class="btn btn-prim btn-bloco" style="margin-top:14px" data-acao="cativo-antigo-ok">Importar agora</button>`,
     });
@@ -602,9 +631,11 @@ export function viewCativos(ctx) {
         modelo = novo[turno];
         fecharFolha(); desenhar();
         aviso("Cativos importados.", "ok");
+        await propagarComAviso(["tarde", "noite"]);
       } catch (e) { const er = document.querySelector("#camada .erro-form"); if (er) { er.hidden = false; er.textContent = e.message; } }
     });
   });
+  acoes["cativo-aplicar-todos"] = (el) => ocupado(el, () => propagarComAviso([turno]));
   acoes["cativo-novo"] = () => { if (modelo) abrirEdicao(null); };
   acoes["cativo-editar"] = (el) => { if (modelo) abrirEdicao(el.dataset.mesa); };
   acoes.turno = (el) => {
