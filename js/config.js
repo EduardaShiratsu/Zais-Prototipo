@@ -46,7 +46,7 @@ export const HORARIOS = [
   { dia: 1, nome: "Segunda", horas: "20h às 1h30", curto: "20h–1h30", nota: "Segunda-feira Dançante" },
   { dia: 2, nome: "Terça", horas: "Fechado", curto: "fechado", fechado: true },
   { dia: 3, nome: "Quarta", horas: "21h às 2h", curto: "21h–2h" },
-  { dia: 4, nome: "Quinta", horas: "Conforme a programação", curto: "veja a programação" },
+  { dia: 4, nome: "Quinta", horas: "Normalmente 21h às 2h (nem sempre tem baile — veja a programação)", curto: "veja a programação" },
   { dia: 5, nome: "Sexta", horas: "21h às 2h", curto: "21h–2h", nota: "Bailes temáticos" },
   { dia: 6, nome: "Sábado", horas: "Tarde 15h às 20h · Noite 22h às 4h", curto: "15h–20h · 22h–4h", nota: "Bandas ao vivo" },
   { dia: 0, nome: "Domingo", horas: "18h às 23h", curto: "18h–23h", nota: "Gafieira Paulista · aula grátis às 18h" },
